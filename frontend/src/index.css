@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --color-brand-50: #fff5f8;
+  --color-brand-100: #ffe9f0;
+  --color-brand-200: #ffd0e0;
+  --color-brand-300: #ffa8c6;
+  --color-brand-400: #fb6fa0;
+  --color-brand-500: #ee3f81;
+  --color-brand-600: #d92368;
+  --color-brand-700: #b41555;
+  --color-brand-800: #8f1245;
+  --color-brand-900: #6f0f39;
+
+  --color-ink-900: #1f2430;
+  --color-ink-700: #4b5163;
+  --color-ink-500: #7c8296;
+  --color-ink-300: #c3c7d3;
+}
+
+html[data-theme="kalsankar"] {
+  --color-brand-50: #faf6f0;
+  --color-brand-100: #f3e6d4;
+  --color-brand-200: #e4c9a0;
+  --color-brand-300: #d4a017;
+  --color-brand-400: #c45c26;
+  --color-brand-500: #9b2c2c;
+  --color-brand-600: #7f1d1d;
+  --color-brand-700: #641616;
+  --color-brand-800: #4a1010;
+  --color-brand-900: #2d0a0a;
+}
+
+html[data-theme="admin"] {
+  --color-brand-50: #f4f6fb;
+  --color-brand-100: #e8ecf4;
+  --color-brand-200: #cfd7e6;
+  --color-brand-300: #9eacc8;
+  --color-brand-400: #6b7fa8;
+  --color-brand-500: #3d4f73;
+  --color-brand-600: #334463;
+  --color-brand-700: #283552;
+  --color-brand-800: #1e2940;
+  --color-brand-900: #141c2e;
+}
+
+html[data-theme="login"] {
+  --color-brand-50: #f4f6fb;
+  --color-brand-100: #e8ecf4;
+  --color-brand-200: #cfd7e6;
+  --color-brand-300: #9eacc8;
+  --color-brand-400: #6b7fa8;
+  --color-brand-500: #3d4f73;
+  --color-brand-600: #334463;
+  --color-brand-700: #283552;
+  --color-brand-800: #1e2940;
+  --color-brand-900: #141c2e;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-brand-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Printing: only the invoice (.print-area) is output. */
+@media print {
+  @page {
+    margin: 10mm;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+  }
+  /* Several invoices in one print job: each starts on a new page. */
+  .print-area .receipt-page + .receipt-page {
+    break-before: page;
+    page-break-before: always;
+  }
+  .label-sheet {
+    break-after: page;
+    page-break-after: always;
+  }
+  .label-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+@keyframes scan-flash {
+  0% {
+    background-color: var(--color-brand-100);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.scan-flash {
+  animation: scan-flash 1.2s ease-out;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-brand-200);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}

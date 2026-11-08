@@ -1,0 +1,869 @@
+// Ivory Lace schema (Auth + Inventory + Billing + Multi-store + Returns/Exchanges)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BarcodeMode {
+  LATER
+  SYSTEM
+  MANUAL
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  MANAGER
+  CASHIER
+}
+
+enum StoreChain {
+  IVORY_LACE
+  KALSANKAR_OS
+}
+
+enum DocumentEntityType {
+  INVOICE
+  EXPENSE
+  PURCHASE_ORDER
+  PRODUCT_IMAGE
+  SHOP_DOCUMENT
+  ORGANIZATION_AGREEMENT
+  ORGANIZATION_OTHER
+  USER_PROFILE
+}
+
+model Store {
+  id            String     @id @default(uuid())
+  name          String
+  code          String     @unique
+  chain         StoreChain @default(IVORY_LACE)
+  city          String?
+  invoiceSeq    Int        @default(0)
+  creditNoteSeq Int        @default(0)
+  transferSeq   Int        @default(0)
+  createdAt     DateTime   @default(now())
+
+  // Hierarchy: head branch -> branch -> sub-branch.
+  parentId String?
+  parent   Store?  @relation("StoreTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Store[] @relation("StoreTree")
+
+  // Legal / invoicing identity (printed on every invoice issued by this store).
+  firmName    String?
+  gstin       String?
+  addressLine String?
+  state       String?
+  pincode     String?
+  phone       String?
+  isActive    Boolean @default(true)
+
+  users                User[]
+  variantStocks        VariantStock[]
+  customers            Customer[]
+  invoices             Invoice[]           @relation("InvoiceSeller")
+  billedInvoices       Invoice[]           @relation("InvoiceBilledAt")
+  stockMovements       StockMovement[]
+  creditNotes          CreditNote[]        @relation("CreditNoteIssuer")
+  processedCreditNotes CreditNote[]        @relation("CreditNoteBilledAt")
+  exchanges            ReturnExchange[]
+  storeCreditEntries   StoreCreditLedger[]
+  outgoingTransfers    StockTransfer[]     @relation("TransferFrom")
+  incomingTransfers    StockTransfer[]     @relation("TransferTo")
+  verificationBatches  VerificationBatch[]
+  documents            Document[]
+
+  @@index([chain])
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(MANAGER)
+  // Super admins have no home store; they pick a store to work in.
+  storeId      String?
+  store        Store?   @relation(fields: [storeId], references: [id])
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  invoices       Invoice[]
+  stockMovements StockMovement[]
+  creditNotes    CreditNote[]
+  exchanges      ReturnExchange[]
+  createdTransfers           StockTransfer[]     @relation("TransferCreatedBy")
+  receivedTransfers          StockTransfer[]     @relation("TransferReceivedBy")
+  createdVerificationBatches VerificationBatch[] @relation("VerificationCreatedBy")
+  scannedVerificationLines   VerificationLine[]  @relation("VerificationScannedBy")
+  uploadedDocuments          Document[]
+
+  @@index([storeId])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model EmailRecipient {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  name            String?
+  receiveBills    Boolean  @default(true)
+  receiveLowStock Boolean  @default(true)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model Brand {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Category {
+  id            String        @id @default(uuid())
+  name          String        @unique
+  subCategories SubCategory[]
+  products      Product[]
+}
+
+model SubCategory {
+  id         String    @id @default(uuid())
+  name       String
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  products   Product[]
+
+  @@unique([categoryId, name])
+}
+
+model Size {
+  id       String           @id @default(uuid())
+  label    String           @unique
+  variants ProductVariant[]
+}
+
+model Cup {
+  id       String           @id @default(uuid())
+  label    String           @unique
+  variants ProductVariant[]
+}
+
+model Colour {
+  id       String           @id @default(uuid())
+  name     String           @unique
+  hex      String?
+  variants ProductVariant[]
+}
+
+/** Dropdown values for Kalsankar saree attributes. Stored as names on SareeDetail. */
+model SareeLookupOption {
+  id    String @id @default(uuid())
+  field String
+  name  String
+
+  @@unique([field, name])
+  @@index([field])
+}
+
+model Product {
+  id                String       @id @default(uuid())
+  chain             StoreChain   @default(IVORY_LACE)
+  brandId           String?
+  brand             Brand?       @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  categoryId        String?
+  category          Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  subCategoryId     String?
+  subCategory       SubCategory? @relation(fields: [subCategoryId], references: [id], onDelete: SetNull)
+  styleName         String
+  supplierStyleCode String?
+  internalStyleCode String       @unique
+  hsnCode           String?
+  countryOfOrigin   String?
+  launchDate        DateTime?
+  description       String?
+
+  supplierManufacturer String?
+  leadTimeDays         Int?
+  reorderLevelPcs      Int?
+  shelfLocation        String?
+  isActive             Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  specification ProductSpecification?
+  sareeDetail   SareeDetail?
+  images        ProductImage[]
+  variants      ProductVariant[]
+
+  @@index([chain])
+  @@index([brandId])
+  @@index([categoryId])
+}
+
+model SareeDetail {
+  id        String  @id @default(uuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sareeCategory         String
+  sareeType             String?
+  subcategory           String?
+  weavingTechnique      String?
+  fabricComposition     String?
+  colour                String
+  secondaryColour       String?
+  designPattern         String?
+  borderType            String?
+  borderWidth           String?
+  palluType             String?
+  blousePiece           String?
+  sareeLength           String?
+  occasion              String?
+  regionOfOrigin        String?
+  productPhotographType String?
+  certification         String?
+
+  supplierName          String?
+  supplierCode          String?
+  supplierInvoiceNumber String?
+  purchaseDate          DateTime?
+
+  originalStoreId          String?
+  department               String?
+  rackLocation             String?
+  stockStatus              String?
+  dateReceived             DateTime?
+  lastPhysicalVerification DateTime?
+  lastVerifiedBy           String?
+  stockCondition           String?
+  reservationStatus        String?
+  createdByName            String?
+}
+
+model AppSequence {
+  chain    StoreChain @id
+  sareeSeq Int        @default(0)
+}
+
+model ProductSpecification {
+  id        String  @id @default(uuid())
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  padded            String?
+  wired             String?
+  cupConstruction   String?
+  numberOfPanels    String?
+  coverage          String?
+  strapType         String?
+  strapWidth        String?
+  adjustableStraps  String?
+  removableStraps   String?
+  hookAndEye        String?
+  underbandWidth    String?
+  fabricComposition String?
+  lining            String?
+  gsm               String?
+  elasticType       String?
+  elasticWidth      String?
+  seamType          String?
+  finish            String?
+  washCare          String?
+  tags              String[]
+}
+
+model ProductImage {
+  id         String    @id @default(uuid())
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url        String
+  imageType  String
+  sortOrder  Int       @default(0)
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  createdAt  DateTime  @default(now())
+
+  @@index([productId])
+}
+
+model Document {
+  id               String             @id @default(uuid())
+  shopId           String?
+  shop             Store?             @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  entityType       DocumentEntityType
+  entityId         String?
+  originalFileName String
+  s3Bucket         String
+  s3Key            String             @unique
+  mimeType         String
+  fileSize         Int
+  uploadedById     String
+  uploadedBy       User               @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  deletedAt        DateTime?
+
+  productImages ProductImage[]
+
+  @@index([shopId, entityType, entityId])
+  @@index([uploadedById])
+}
+
+model ProductVariant {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sizeId   String?
+  size     Size?   @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  cupId    String?
+  cup      Cup?    @relation(fields: [cupId], references: [id], onDelete: SetNull)
+  colourId String?
+  colour   Colour? @relation(fields: [colourId], references: [id], onDelete: SetNull)
+
+  skuCode String @unique
+
+  mrp               Decimal @db.Decimal(10, 2)
+  sellingPriceInput Decimal @db.Decimal(10, 2)
+  isGstInclusive    Boolean @default(false)
+  gstRate           Decimal @db.Decimal(4, 2)
+  basePrice         Decimal @db.Decimal(10, 2)
+  gstAmount         Decimal @db.Decimal(10, 2)
+  finalPrice        Decimal @db.Decimal(10, 2)
+
+  lowStockAlertPcs   Int @default(10)
+  outOfStockAlertPcs Int @default(0)
+
+  barcodeMode  BarcodeMode @default(LATER)
+  barcodeValue String?     @unique
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stocks            VariantStock[]
+  invoiceItems      InvoiceItem[]
+  stockMovements    StockMovement[]
+  transferLines     StockTransferLine[]
+  verificationLines VerificationLine[]
+
+  @@unique([productId, sizeId, cupId, colourId])
+}
+
+model VariantStock {
+  id        String         @id @default(uuid())
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store          @relation(fields: [storeId], references: [id])
+  quantity  Int            @default(0)
+  updatedAt DateTime       @updatedAt
+
+  @@unique([variantId, storeId])
+  @@index([storeId])
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 - Customers + Billing (POS)
+// ---------------------------------------------------------------------------
+
+enum Gender {
+  FEMALE
+  MALE
+  OTHER
+}
+
+enum InvoiceStatus {
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  // Settlement adjustments used by exchanges.
+  CREDIT_NOTE
+  STORE_CREDIT
+}
+
+enum StockMovementType {
+  SALE
+  SALE_CANCEL
+  RETURN_IN
+  TRANSFER_OUT
+  TRANSFER_IN
+}
+
+enum TransferStatus {
+  DRAFT
+  DISPATCHED
+  RECEIVING
+  COMPLETED
+  CANCELLED
+}
+
+enum TransferSource {
+  PLANNED
+  POS_SCAN
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+enum ReturnVerificationStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+}
+
+enum ExchangeType {
+  RETURN
+  EXCHANGE
+}
+
+enum SettlementType {
+  NONE
+  PAYMENT_COLLECTED
+  REFUND
+  STORE_CREDIT
+}
+
+model Customer {
+  id              String    @id @default(uuid())
+  customerNo      Int       @unique @default(autoincrement())
+  name            String
+  mobile          String    @unique
+  email           String?
+  gender          Gender?
+  dateOfBirth     DateTime?
+  anniversaryDate DateTime?
+
+  addressLine String?
+  city        String?
+  state       String?
+  pincode     String?
+
+  gstin String?
+  notes String?
+
+  isLoyaltyMember Boolean @default(false)
+  loyaltyPoints   Int     @default(0)
+  isActive        Boolean @default(true)
+
+  storeCreditBalance Decimal @default(0) @db.Decimal(12, 2)
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices          Invoice[]
+  creditNotes       CreditNote[]
+  exchanges         ReturnExchange[]
+  storeCreditLedger StoreCreditLedger[]
+
+  @@index([name])
+  @@index([city])
+  @@index([createdAt])
+  @@index([storeId])
+}
+
+model Invoice {
+  id            String @id @default(uuid())
+  invoiceNumber String @unique
+
+  // storeId = the store that OWNS the stock sold and issues the invoice (seller of record).
+  // GST, numbering series, stock and sales reports all follow this store.
+  storeId         String
+  store           Store  @relation("InvoiceSeller", fields: [storeId], references: [id])
+  // billedAtStoreId = the store where the sale was physically rung up. Equals storeId for normal sales.
+  billedAtStoreId String
+  billedAtStore   Store  @relation("InvoiceBilledAt", fields: [billedAtStoreId], references: [id])
+  userId          String
+  user            User   @relation(fields: [userId], references: [id])
+
+  // Invoices created by the same checkout (cross-store or >50k splits) share a group id.
+  checkoutGroupId String?
+  splitIndex      Int     @default(1)
+  splitCount      Int     @default(1)
+
+  // Unique per-bill token embedded in the invoice QR code.
+  qrToken String @unique
+
+  // Seller snapshot so the invoice stays accurate even if the store profile is edited later.
+  sellerFirmName String?
+  sellerGstin    String?
+  sellerAddress  String?
+
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  // Snapshot so the invoice stays accurate even if the customer is edited later.
+  customerName   String?
+  customerMobile String?
+  customerGstin  String?
+
+  subtotal      Decimal @db.Decimal(12, 2)
+  discountTotal Decimal @db.Decimal(12, 2)
+  taxableAmount Decimal @db.Decimal(12, 2)
+  cgst          Decimal @db.Decimal(12, 2)
+  sgst          Decimal @db.Decimal(12, 2)
+  roundOff      Decimal @db.Decimal(6, 2)
+  grandTotal    Decimal @db.Decimal(12, 2)
+  amountPaid    Decimal @db.Decimal(12, 2)
+  totalQuantity Int
+
+  loyaltyPointsEarned Int @default(0)
+
+  status       InvoiceStatus @default(COMPLETED)
+  notes        String?
+  cancelReason String?
+  cancelledAt  DateTime?
+  emailedAt    DateTime?
+
+  // Set when this invoice is the replacement bill of an exchange.
+  exchangeId String?
+  exchange   ReturnExchange? @relation("ExchangeReplacementInvoices", fields: [exchangeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items          InvoiceItem[]
+  payments       InvoicePayment[]
+  stockMovements StockMovement[]
+  creditNotes    CreditNote[]
+  originalOf     ReturnExchange[] @relation("ExchangeOriginalInvoice")
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([storeId, createdAt])
+  @@index([billedAtStoreId, createdAt])
+  @@index([userId])
+  @@index([checkoutGroupId])
+  @@index([exchangeId])
+}
+
+model InvoiceItem {
+  id        String  @id @default(uuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  // Snapshots of what was sold.
+  styleName    String
+  skuCode      String
+  barcodeValue String?
+  sizeLabel    String?
+  cupLabel     String?
+  colourName   String?
+  hsnCode      String?
+
+  quantity       Int
+  mrp            Decimal      @db.Decimal(10, 2)
+  unitPrice      Decimal      @db.Decimal(10, 2)
+  discountType   DiscountType @default(PERCENT)
+  discountValue  Decimal      @default(0) @db.Decimal(12, 2)
+  discountPct    Decimal      @default(0) @db.Decimal(5, 2)
+  discountAmount Decimal      @default(0) @db.Decimal(12, 2)
+  gstRate        Decimal      @db.Decimal(4, 2)
+  taxableAmount  Decimal      @db.Decimal(12, 2)
+  gstAmount      Decimal      @db.Decimal(12, 2)
+  lineTotal      Decimal      @db.Decimal(12, 2)
+
+  creditNoteItems CreditNoteItem[]
+
+  @@index([invoiceId])
+  @@index([variantId])
+}
+
+model InvoicePayment {
+  id        String        @id @default(uuid())
+  invoiceId String
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  method    PaymentMethod
+  amount    Decimal       @db.Decimal(12, 2)
+  reference String?
+
+  @@index([invoiceId])
+}
+
+model StockMovement {
+  id             String            @id @default(uuid())
+  variantId      String?
+  variant        ProductVariant?   @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  storeId        String
+  store          Store             @relation(fields: [storeId], references: [id])
+  type           StockMovementType
+  quantityChange Int
+  balanceAfter   Int?
+  invoiceId      String?
+  invoice        Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  creditNoteId   String?
+  creditNote     CreditNote?       @relation(fields: [creditNoteId], references: [id], onDelete: SetNull)
+  transferId     String?
+  transfer       StockTransfer?    @relation(fields: [transferId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime          @default(now())
+
+  @@index([variantId, createdAt])
+  @@index([invoiceId])
+  @@index([creditNoteId])
+  @@index([transferId])
+  @@index([storeId])
+}
+
+// ---------------------------------------------------------------------------
+// Inter-store transfers (planned packages + POS auto-claim)
+// ---------------------------------------------------------------------------
+
+model StockTransfer {
+  id          String         @id @default(uuid())
+  packageCode String         @unique
+  chain       StoreChain
+  status      TransferStatus @default(DRAFT)
+  source      TransferSource @default(PLANNED)
+  notes       String?
+
+  fromStoreId String
+  fromStore   Store  @relation("TransferFrom", fields: [fromStoreId], references: [id])
+  toStoreId   String
+  toStore     Store  @relation("TransferTo", fields: [toStoreId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("TransferCreatedBy", fields: [createdById], references: [id])
+
+  dispatchedAt DateTime?
+
+  packageReceivedAt   DateTime?
+  packageReceivedById String?
+  packageReceivedBy   User?    @relation("TransferReceivedBy", fields: [packageReceivedById], references: [id], onDelete: SetNull)
+
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lines          StockTransferLine[]
+  stockMovements StockMovement[]
+
+  @@index([chain, createdAt])
+  @@index([fromStoreId, createdAt])
+  @@index([toStoreId, createdAt])
+  @@index([status])
+}
+
+model StockTransferLine {
+  id         String        @id @default(uuid())
+  transferId String
+  transfer   StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  skuCode   String
+  styleName String
+  quantity  Int    @default(1)
+  receivedQuantity Int @default(0)
+
+  scannedOutAt DateTime?
+  scannedInAt  DateTime?
+
+  @@unique([transferId, variantId])
+  @@index([variantId])
+}
+
+// ---------------------------------------------------------------------------
+// Returns & Exchanges (GST credit notes)
+// ---------------------------------------------------------------------------
+
+model ReturnExchange {
+  id         String       @id @default(uuid())
+  exchangeNo Int          @unique @default(autoincrement())
+  type       ExchangeType
+
+  originalInvoiceId String
+  originalInvoice   Invoice @relation("ExchangeOriginalInvoice", fields: [originalInvoiceId], references: [id])
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  // Store that processed the return/exchange at the counter.
+  billedAtStoreId String
+  billedAtStore   Store  @relation(fields: [billedAtStoreId], references: [id])
+  userId          String
+  user            User   @relation(fields: [userId], references: [id])
+
+  creditTotal      Decimal @db.Decimal(12, 2)
+  replacementTotal Decimal @db.Decimal(12, 2)
+  // replacementTotal - creditTotal. Positive: customer pays. Negative: refund / store credit.
+  netAmount        Decimal @db.Decimal(12, 2)
+
+  settlementType   SettlementType @default(NONE)
+  settlementAmount Decimal        @default(0) @db.Decimal(12, 2)
+  settlementMethod PaymentMethod?
+
+  reason String?
+  notes  String?
+
+  createdAt DateTime @default(now())
+
+  creditNotes         CreditNote[]
+  replacementInvoices Invoice[]           @relation("ExchangeReplacementInvoices")
+  storeCreditEntries  StoreCreditLedger[]
+
+  @@index([originalInvoiceId])
+  @@index([createdAt])
+  @@index([billedAtStoreId])
+}
+
+model CreditNote {
+  id               String @id @default(uuid())
+  creditNoteNumber String @unique
+
+  // Issuing store = store of the original invoice (the seller of record).
+  storeId         String
+  store           Store  @relation("CreditNoteIssuer", fields: [storeId], references: [id])
+  billedAtStoreId String
+  billedAtStore   Store  @relation("CreditNoteBilledAt", fields: [billedAtStoreId], references: [id])
+  userId          String
+  user            User   @relation(fields: [userId], references: [id])
+
+  originalInvoiceId     String
+  originalInvoice       Invoice  @relation(fields: [originalInvoiceId], references: [id])
+  // Snapshot of the original document reference (GST credit notes must cite these).
+  originalInvoiceNumber String
+  originalInvoiceDate   DateTime
+
+  exchangeId String?
+  exchange   ReturnExchange? @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
+
+  customerId     String?
+  customer       Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName   String?
+  customerMobile String?
+  customerGstin  String?
+
+  sellerFirmName String?
+  sellerGstin    String?
+  sellerAddress  String?
+
+  qrToken String @unique
+
+  taxableAmount Decimal @db.Decimal(12, 2)
+  cgst          Decimal @db.Decimal(12, 2)
+  sgst          Decimal @db.Decimal(12, 2)
+  roundOff      Decimal @db.Decimal(6, 2)
+  totalAmount   Decimal @db.Decimal(12, 2)
+  totalQuantity Int
+
+  reason String?
+
+  createdAt DateTime @default(now())
+
+  items          CreditNoteItem[]
+  stockMovements StockMovement[]
+
+  @@index([createdAt])
+  @@index([storeId, createdAt])
+  @@index([originalInvoiceId])
+  @@index([exchangeId])
+  @@index([billedAtStoreId])
+}
+
+model CreditNoteItem {
+  id           String     @id @default(uuid())
+  creditNoteId String
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  invoiceItemId String?
+  invoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id], onDelete: SetNull)
+  variantId     String?
+
+  styleName    String
+  skuCode      String
+  barcodeValue String?
+  sizeLabel    String?
+  cupLabel     String?
+  colourName   String?
+  hsnCode      String?
+
+  quantity       Int
+  unitPrice      Decimal @db.Decimal(10, 2)
+  discountAmount Decimal @default(0) @db.Decimal(12, 2)
+  gstRate        Decimal @db.Decimal(4, 2)
+  taxableAmount  Decimal @db.Decimal(12, 2)
+  gstAmount      Decimal @db.Decimal(12, 2)
+  lineTotal      Decimal @db.Decimal(12, 2)
+
+  verificationStatus ReturnVerificationStatus @default(PENDING_VERIFICATION)
+  verifiedAt         DateTime?
+  verifiedByUserId   String?
+  verificationNote   String?
+
+  @@index([creditNoteId])
+  @@index([invoiceItemId])
+  @@index([verificationStatus])
+}
+
+model StoreCreditLedger {
+  id           String          @id @default(uuid())
+  customerId   String
+  customer     Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  // Positive = credit issued, negative = credit redeemed.
+  amount       Decimal         @db.Decimal(12, 2)
+  balanceAfter Decimal         @db.Decimal(12, 2)
+  reason       String
+  storeId      String?
+  store        Store?          @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  exchangeId   String?
+  exchange     ReturnExchange? @relation(fields: [exchangeId], references: [id], onDelete: SetNull)
+  invoiceId    String?
+  createdAt    DateTime        @default(now())
+
+  @@index([customerId, createdAt])
+}
+
+model VerificationBatch {
+  id             String    @id @default(uuid())
+  storeId        String
+  store          Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User      @relation("VerificationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  requestedCount Int
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  lines VerificationLine[]
+
+  @@index([storeId, completedAt])
+}
+
+model VerificationLine {
+  id          String            @id @default(uuid())
+  batchId     String
+  batch       VerificationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  variantId   String
+  variant     ProductVariant    @relation(fields: [variantId], references: [id], onDelete: Restrict)
+  skuCode     String
+  styleName   String
+  colour      String?
+  scannedAt   DateTime?
+  scannedById String?
+  scannedBy   User?             @relation("VerificationScannedBy", fields: [scannedById], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, variantId])
+  @@index([variantId])
+}

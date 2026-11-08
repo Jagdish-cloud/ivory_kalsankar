@@ -1,0 +1,14 @@
+node_modules
+dist
+# Keep environment variables out of version control
+.env
+.env.development
+.env.production
+.env.test
+.env.local
+
+/src/generated/prisma
+
+# Uploaded product images (local dev storage)
+/uploads/*
+!/uploads/.gitkeep
