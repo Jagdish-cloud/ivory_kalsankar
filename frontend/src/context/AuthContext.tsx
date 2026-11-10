@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ACTIVE_STORE_STORAGE_KEY, apiClient, AUTH_TOKEN_STORAGE_KEY, BILL_DRAFT_STORAGE_KEY, extractErrorMessage } from "@/lib/apiClient";
-import type { AuthUser } from "@/types/auth";
+import type { AuthUser, StoreSummary } from "@/types/auth";
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -11,6 +11,8 @@ interface AuthContextValue {
   isSuperAdmin: boolean;
   /** Super admin only: switch the store the app acts in (reloads the app). */
   switchStore: (storeId: string) => void;
+  /** Super admin Add SKU: align X-Store-Id with the destination without reloading. */
+  setActingStore: (store: StoreSummary) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -41,6 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       switchStore: (storeId: string) => {
         localStorage.setItem(ACTIVE_STORE_STORAGE_KEY, storeId);
         window.location.reload();
+      },
+      setActingStore: (store: StoreSummary) => {
+        localStorage.setItem(ACTIVE_STORE_STORAGE_KEY, store.id);
+        setUser((prev) => (prev ? { ...prev, store } : prev));
       },
       login: async (email: string, password: string) => {
         try {

@@ -44,6 +44,7 @@ function SkuDestinationPicker({
   onContinue: (store: StoreSummary) => void;
 }) {
   const navigate = useNavigate();
+  const { setActingStore } = useAuth();
   const { data: stores } = useStoreOptions();
   const [chain, setChain] = useState<StoreChain>(defaultStore?.chain ?? "IVORY_LACE");
   const [storeId, setStoreId] = useState(defaultStore?.id ?? "");
@@ -92,7 +93,14 @@ function SkuDestinationPicker({
           </FieldWrapper>
         </div>
         <div className="mt-5 flex justify-end">
-          <Button disabled={!selected} onClick={() => selected && onContinue(selected)}>
+          <Button
+            disabled={!selected}
+            onClick={() => {
+              if (!selected) return;
+              setActingStore(selected);
+              onContinue(selected);
+            }}
+          >
             Continue
           </Button>
         </div>
