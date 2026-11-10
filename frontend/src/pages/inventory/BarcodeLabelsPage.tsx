@@ -41,15 +41,22 @@ function loadSaved(): Saved {
 }
 
 function fieldLabelsFor(isSaree: boolean): { key: keyof LabelFields; label: string }[] {
-  return [
+  const common: { key: keyof LabelFields; label: string }[] = [
     { key: "brand", label: "Store name" },
-    { key: "style", label: "Style name" },
-    { key: "variant", label: "Size / cup / colour" },
-    { key: "sku", label: "SKU code" },
     { key: "mrp", label: isSaree ? "Selling Price" : "MRP" },
-    { key: "barcodeText", label: "Number under bars" },
-    { key: "border", label: "Cut guide border" },
+    { key: "style", label: isSaree ? "Type / colour" : "Style name" },
   ];
+  if (isSaree) {
+    common.push({ key: "category", label: "Saree category" }, { key: "supplierCode", label: "Supplier code" });
+  } else {
+    common.push({ key: "variant", label: "Size / cup / colour" });
+  }
+  common.push(
+    { key: "sku", label: "SKU code" },
+    { key: "barcodeText", label: "Number under bars" },
+    { key: "border", label: "Cut guide border" }
+  );
+  return common;
 }
 
 export function BarcodeLabelsPage() {

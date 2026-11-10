@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { Prisma, StoreChain } from "@prisma/client";
 import { prisma } from "@/prismaClient";
+import { isSuperAdmin } from "@/middleware/auth";
 import { ApiError } from "@/middleware/errorHandler";
 import { storeChainOf } from "@/utils/storeChain";
 
@@ -217,6 +218,7 @@ const sareeCreateSchema = z.object({
 const sareeUpdateSchema = z.object({ name: z.string().trim().min(1).max(80) });
 
 async function requireKalsankar(req: Request) {
+  if (isSuperAdmin(req)) return;
   const chain = await storeChainOf(req.auth!.storeId);
   if (chain !== StoreChain.KALSANKAR_OS) {
     throw new ApiError(400, "Saree lookups are only available for Kalsankar OS");
@@ -289,6 +291,86 @@ export const colours = {
       () => prisma.colour.delete({ where: { id: req.params.id as string } }),
       "Colour not found",
       "Colour is in use"
+    );
+    res.status(204).send();
+  },
+};
+
+const optionalSupplierText = (max = 120) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v : null));
+
+const supplierCreateSchema = z.object({
+  code: z.string().trim().min(1, "Supplier code is required").max(80),
+  name: optionalSupplierText(160),
+  phone: optionalSupplierText(40),
+  city: optionalSupplierText(80),
+  state: optionalSupplierText(80),
+});
+
+const supplierUpdateSchema = z.object({
+  code: z.string().trim().min(1).max(80).optional(),
+  name: optionalSupplierText(160),
+  phone: optionalSupplierText(40),
+  city: optionalSupplierText(80),
+  state: optionalSupplierText(80),
+});
+
+export const suppliers = {
+  list: async (req: Request, res: Response) => {
+    await requireKalsankar(req);
+    res.json(await prisma.supplier.findMany({ orderBy: { code: "asc" } }));
+  },
+  create: async (req: Request, res: Response) => {
+    await requireKalsankar(req);
+    const input = supplierCreateSchema.parse(req.body);
+    const supplier = await runOrMapPrismaError(
+      () =>
+        prisma.supplier.create({
+          data: {
+            code: input.code,
+            name: input.name,
+            phone: input.phone,
+            city: input.city,
+            state: input.state,
+          },
+        }),
+      "Supplier not found",
+      `Supplier code "${input.code}" already exists`
+    );
+    res.status(201).json(supplier);
+  },
+  update: async (req: Request, res: Response) => {
+    await requireKalsankar(req);
+    const input = supplierUpdateSchema.parse(req.body);
+    const supplier = await runOrMapPrismaError(
+      () =>
+        prisma.supplier.update({
+          where: { id: req.params.id as string },
+          data: {
+            ...(input.code !== undefined ? { code: input.code } : {}),
+            ...(input.name !== undefined ? { name: input.name } : {}),
+            ...(input.phone !== undefined ? { phone: input.phone } : {}),
+            ...(input.city !== undefined ? { city: input.city } : {}),
+            ...(input.state !== undefined ? { state: input.state } : {}),
+          },
+        }),
+      "Supplier not found",
+      `Supplier code already exists`
+    );
+    res.json(supplier);
+  },
+  remove: async (req: Request, res: Response) => {
+    await requireKalsankar(req);
+    await runOrMapPrismaError(
+      () => prisma.supplier.delete({ where: { id: req.params.id as string } }),
+      "Supplier not found",
+      "Supplier is in use"
     );
     res.status(204).send();
   },

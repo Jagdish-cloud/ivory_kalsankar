@@ -37,7 +37,19 @@ export async function labelVariants(req: Request, res: Response) {
           : []),
       ],
     },
-    include: { product: { select: { id: true, styleName: true } }, size: true, cup: true, colour: true, stocks: true },
+    include: {
+      product: {
+        select: {
+          id: true,
+          styleName: true,
+          sareeDetail: { select: { sareeCategory: true, supplierCode: true, colour: true, sareeType: true } },
+        },
+      },
+      size: true,
+      cup: true,
+      colour: true,
+      stocks: true,
+    },
     orderBy: [{ product: { styleName: "asc" } }, { skuCode: "asc" }],
     take: 120,
   });
@@ -51,7 +63,9 @@ export async function labelVariants(req: Request, res: Response) {
       barcodeValue: v.barcodeValue ?? v.skuCode,
       size: v.size?.label ?? null,
       cup: v.cup?.label ?? null,
-      colour: v.colour?.name ?? null,
+      colour: v.colour?.name ?? v.product.sareeDetail?.colour ?? null,
+      sareeCategory: v.product.sareeDetail?.sareeCategory ?? null,
+      supplierCode: v.product.sareeDetail?.supplierCode ?? null,
       mrp: num(v.mrp),
       finalPrice: num(v.finalPrice),
       stockByStore: Object.fromEntries(v.stocks.map((s) => [s.storeId, s.quantity])),

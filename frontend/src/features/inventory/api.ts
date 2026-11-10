@@ -62,6 +62,64 @@ export function useDeleteSareeLookup() {
   });
 }
 
+export interface SupplierLookup {
+  id: string;
+  code: string;
+  name: string | null;
+  phone: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+export type SupplierInput = {
+  code: string;
+  name?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  state?: string | null;
+};
+
+export function useSuppliers() {
+  return useQuery({
+    queryKey: ["lookup", "suppliers"],
+    queryFn: async () => (await apiClient.get<SupplierLookup[]>("/lookups/suppliers")).data,
+  });
+}
+
+export function useCreateSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: SupplierInput) =>
+      (await apiClient.post<SupplierLookup>("/lookups/suppliers", payload)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lookup", "suppliers"] });
+    },
+  });
+}
+
+export function useUpdateSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: SupplierInput & { id: string }) =>
+      (await apiClient.patch<SupplierLookup>(`/lookups/suppliers/${id}`, payload)).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lookup", "suppliers"] });
+    },
+  });
+}
+
+export function useDeleteSupplier() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/lookups/suppliers/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lookup", "suppliers"] });
+    },
+  });
+}
+
 export function useDeleteSaree() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -35,6 +35,8 @@ export interface LabelFields {
   mrp: boolean;
   barcodeText: boolean;
   border: boolean;
+  category: boolean;
+  supplierCode: boolean;
 }
 
 export const defaultFields: LabelFields = {
@@ -45,6 +47,8 @@ export const defaultFields: LabelFields = {
   mrp: true,
   barcodeText: true,
   border: false,
+  category: true,
+  supplierCode: true,
 };
 
 export interface LabelVariant {
@@ -56,6 +60,8 @@ export interface LabelVariant {
   size: string | null;
   cup: string | null;
   colour: string | null;
+  sareeCategory?: string | null;
+  supplierCode?: string | null;
   mrp: number;
   finalPrice: number;
   stockByStore: Record<string, number>;

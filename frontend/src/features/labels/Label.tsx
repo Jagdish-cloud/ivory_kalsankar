@@ -42,6 +42,12 @@ export function Label({ item, barcode, preset, fields, textScale, firm, sellingP
   const baseMm = Math.min(preset.labelH * 0.14, 3.4) * textScale;
   const variant = [item.size, item.cup, item.colour].filter(Boolean).join(" / ");
   const small = { fontSize: `${baseMm * 0.85}mm`, lineHeight: 1.15 } as const;
+  const priceMm = baseMm * 1.5;
+  const isSaree = Boolean(sellingPrice || item.sareeCategory || item.supplierCode);
+  const useSellingPrice = Boolean(sellingPrice || isSaree);
+  const priceLabel = useSellingPrice
+    ? formatMoney(item.finalPrice).replace(".00", "")
+    : `MRP ${formatMoney(item.mrp).replace(".00", "")}`;
 
   return (
     <div
@@ -59,26 +65,47 @@ export function Label({ item, barcode, preset, fields, textScale, firm, sellingP
           {firm}
         </div>
       )}
-      {fields.style && (
+
+      {/* Ivory Lace keeps style/variant above the rate; Kalsankar moves style below the bars. */}
+      {!isSaree && fields.style && (
         <div className="truncate text-center font-semibold" style={{ fontSize: `${baseMm}mm`, lineHeight: 1.15 }}>
           {item.styleName}
         </div>
       )}
-      {fields.variant && variant && (
+      {!isSaree && fields.variant && variant && (
         <div className="truncate text-center" style={small}>
           {variant}
         </div>
       )}
+
+      {fields.mrp && (
+        <div className="truncate text-center font-bold" style={{ fontSize: `${priceMm}mm`, lineHeight: 1.1 }}>
+          {priceLabel}
+        </div>
+      )}
+
       <div className="min-h-0 flex-1 py-[0.4mm]">
         <BarcodeSvg value={barcode} showText={fields.barcodeText} textMm={baseMm} />
       </div>
-      {(fields.sku || fields.mrp) && (
+
+      {isSaree && fields.category && item.sareeCategory && (
+        <div className="truncate text-center font-semibold" style={{ fontSize: `${baseMm}mm`, lineHeight: 1.15 }}>
+          {item.sareeCategory}
+        </div>
+      )}
+      {isSaree && fields.style && (
+        <div className="truncate text-center" style={small}>
+          {item.styleName}
+        </div>
+      )}
+
+      {(fields.sku || (isSaree && fields.supplierCode && item.supplierCode)) && (
         <div className="flex items-end justify-between gap-1" style={small}>
           {fields.sku ? <span className="truncate">{item.skuCode}</span> : <span />}
-          {fields.mrp && (
-            <span className="shrink-0 font-bold">
-              {sellingPrice ? "SP" : "MRP"} {formatMoney(sellingPrice ? item.finalPrice : item.mrp).replace(".00", "")}
-            </span>
+          {isSaree && fields.supplierCode && item.supplierCode ? (
+            <span className="shrink-0 font-semibold">{item.supplierCode}</span>
+          ) : (
+            <span />
           )}
         </div>
       )}

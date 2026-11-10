@@ -108,8 +108,12 @@ export interface SareeDetail {
   certification: string | null;
   supplierName: string | null;
   supplierCode: string | null;
+  supplierPhone: string | null;
+  supplierCity: string | null;
+  supplierState: string | null;
   supplierInvoiceNumber: string | null;
   purchaseDate: string | null;
+  costPrice: string | null;
   originalStoreId: string | null;
   department: string | null;
   rackLocation: string | null;
@@ -170,9 +174,13 @@ export interface CreateSareePayload {
     productPhotographType?: string | null;
     certification?: string | null;
     supplierName?: string | null;
-    supplierCode?: string | null;
+    supplierCode: string;
+    supplierPhone?: string | null;
+    supplierCity?: string | null;
+    supplierState?: string | null;
     supplierInvoiceNumber?: string | null;
     purchaseDate?: string | null;
+    costPrice: number;
     stockStatus?: string | null;
     dateReceived?: string | null;
     stockCondition?: string | null;

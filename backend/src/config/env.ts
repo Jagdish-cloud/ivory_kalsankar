@@ -51,7 +51,7 @@ export const env = {
   port: Number(process.env.PORT ?? 4100),
   databaseUrl: required("DATABASE_URL"),
   jwtSecret,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "100y",
   corsOrigin: corsOriginRaw.split(",")[0]?.trim() || defaultCors,
   corsOrigins: parseOrigins(corsOriginRaw),
   /** Public URL of the web app - embedded in invoice QR codes. */

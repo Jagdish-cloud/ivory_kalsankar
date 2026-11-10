@@ -22,7 +22,7 @@ Copy an example to `.env` or `.env.production` on the machine. Git ignores those
 | `NODE_ENV` | production: yes | `development` / `production` |
 | `DATABASE_URL` | yes | Prisma + pool params on RDS |
 | `JWT_SECRET` | yes | Production: ≥ 32 chars, not the example value |
-| `JWT_EXPIRES_IN` | no | Default `7d` |
+| `JWT_EXPIRES_IN` | no | Default `7d`; use `100y` to keep users signed in permanently |
 | `PORT` | no | Default `4100` |
 | `CORS_ORIGIN` | production: yes | Comma-separated browser origins |
 | `APP_PUBLIC_URL` | production: yes | Invoice QR base URL, no trailing slash |

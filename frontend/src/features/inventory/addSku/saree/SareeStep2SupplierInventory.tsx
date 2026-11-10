@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/Card";
 import { TextAreaField, TextField } from "@/components/ui/Field";
 import { SareeLookupField } from "@/features/inventory/addSku/saree/SareeLookupField";
+import { SupplierField } from "@/features/inventory/addSku/saree/SupplierField";
 import { stockAgeLabel } from "@/features/inventory/addSku/saree/options";
 import type { SareeDraft } from "@/features/inventory/addSku/saree/types";
 
@@ -30,15 +31,17 @@ export function SareeStep2SupplierInventory({
       <Card>
         <h3 className="mb-4 text-sm font-bold text-ink-900">Supplier</h3>
         <div className="grid gap-3 sm:grid-cols-4">
-          <TextField
-            label="Supplier Name"
-            value={draft.saree.supplierName ?? ""}
-            onChange={(e) => setSaree("supplierName", e.target.value)}
-          />
-          <TextField
-            label="Supplier Code"
-            value={draft.saree.supplierCode ?? ""}
-            onChange={(e) => setSaree("supplierCode", e.target.value)}
+          <SupplierField
+            value={{
+              supplierCode: draft.saree.supplierCode ?? "",
+              supplierName: draft.saree.supplierName ?? "",
+              supplierPhone: draft.saree.supplierPhone ?? "",
+              supplierCity: draft.saree.supplierCity ?? "",
+              supplierState: draft.saree.supplierState ?? "",
+            }}
+            onChange={(patch) => {
+              setDraftSareePatch(setSaree, patch);
+            }}
           />
           <TextField
             label="Supplier Invoice Number"
@@ -104,4 +107,19 @@ export function SareeStep2SupplierInventory({
       </Card>
     </div>
   );
+}
+
+function setDraftSareePatch(
+  setSaree: <K extends keyof SareeDraft["saree"]>(key: K, value: SareeDraft["saree"][K]) => void,
+  patch: Partial<{
+    supplierCode: string;
+    supplierName: string;
+    supplierPhone: string;
+    supplierCity: string;
+    supplierState: string;
+  }>
+) {
+  (Object.entries(patch) as [keyof typeof patch, string][]).forEach(([key, val]) => {
+    if (val !== undefined) setSaree(key, val);
+  });
 }

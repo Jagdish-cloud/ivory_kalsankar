@@ -27,7 +27,11 @@ function validateStep(step: number, draft: SareeDraft): string | null {
     if (!draft.saree.sareeCategory.trim()) return "Please select a saree category";
     if (!draft.saree.colour.trim()) return "Please select a colour";
   }
+  if (step === 2) {
+    if (!draft.saree.supplierCode?.trim()) return "Please select or add a supplier code";
+  }
   if (step === 3) {
+    if (!draft.costPrice || Number(draft.costPrice) <= 0) return "Please enter a valid cost price";
     if (!draft.sellingPrice || Number(draft.sellingPrice) <= 0) return "Please enter a valid selling price";
     const rate = Number(draft.gstRate);
     if (draft.gstRate.trim() === "" || !Number.isFinite(rate) || rate < 0 || rate > 100) {
@@ -97,7 +101,7 @@ export function AddSareeForm({ targetStore }: { targetStore?: StoreSummary }) {
   }
 
   async function handleSave() {
-    for (const n of [1, 3]) {
+    for (const n of [1, 2, 3]) {
       const validationError = validateStep(n, draft);
       if (validationError) {
         setError(validationError);
@@ -106,6 +110,7 @@ export function AddSareeForm({ targetStore }: { targetStore?: StoreSummary }) {
       }
     }
 
+    const costPrice = Number(draft.costPrice);
     const sellingPrice = Number(draft.sellingPrice);
     const gstRate = Number(draft.gstRate);
 
@@ -133,7 +138,11 @@ export function AddSareeForm({ targetStore }: { targetStore?: StoreSummary }) {
       }
 
       const payload: CreateSareePayload = {
-        saree: draft.saree,
+        saree: {
+          ...draft.saree,
+          supplierCode: draft.saree.supplierCode.trim(),
+          costPrice,
+        },
         hsnCode: draft.hsnCode || undefined,
         description: draft.description || undefined,
         images,

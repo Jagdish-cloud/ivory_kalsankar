@@ -21,6 +21,15 @@ export function SareeStep3PricingStock({ draft, update }: Props) {
       <Card>
         <h3 className="mb-4 text-sm font-bold text-ink-900">Pricing</h3>
         <div className="space-y-4">
+          <TextField
+            label="Cost Price (₹)"
+            type="number"
+            required
+            value={draft.costPrice}
+            onChange={(e) => update({ costPrice: e.target.value })}
+            hint="Purchase price from the supplier"
+          />
+
           <div>
             <TextField
               label="Selling Price (₹)"

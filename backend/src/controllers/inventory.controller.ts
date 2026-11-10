@@ -816,9 +816,13 @@ const sareeDetailSchema = z.object({
   productPhotographType: optionalSareeText(),
   certification: optionalSareeText(),
   supplierName: optionalSareeText(160),
-  supplierCode: optionalSareeText(),
+  supplierCode: z.string().trim().min(1, "Supplier code is required").max(80),
+  supplierPhone: optionalSareeText(40),
+  supplierCity: optionalSareeText(80),
+  supplierState: optionalSareeText(80),
   supplierInvoiceNumber: optionalSareeText(),
   purchaseDate: z.string().optional().nullable(),
+  costPrice: z.coerce.number().positive("Enter a valid cost price"),
   stockStatus: optionalSareeText(),
   dateReceived: z.string().optional().nullable(),
   stockCondition: optionalSareeText(),
@@ -868,8 +872,12 @@ function sareeRow(detail: z.infer<typeof sareeDetailSchema>) {
     certification: detail.certification,
     supplierName: detail.supplierName,
     supplierCode: detail.supplierCode,
+    supplierPhone: detail.supplierPhone,
+    supplierCity: detail.supplierCity,
+    supplierState: detail.supplierState,
     supplierInvoiceNumber: detail.supplierInvoiceNumber,
     purchaseDate: parseOptionalDate(detail.purchaseDate),
+    costPrice: detail.costPrice,
     stockStatus: detail.stockStatus ?? "Available",
     dateReceived: parseOptionalDate(detail.dateReceived),
     stockCondition: detail.stockCondition,
@@ -886,11 +894,37 @@ export async function nextSareeId(req: Request, res: Response) {
   res.json({ sareeId: formatSareeId((row?.sareeSeq ?? 0) + 1) });
 }
 
+async function upsertSupplierFromSaree(detail: {
+  supplierCode: string;
+  supplierName?: string | null;
+  supplierPhone?: string | null;
+  supplierCity?: string | null;
+  supplierState?: string | null;
+}) {
+  await prisma.supplier.upsert({
+    where: { code: detail.supplierCode },
+    create: {
+      code: detail.supplierCode,
+      name: detail.supplierName ?? null,
+      phone: detail.supplierPhone ?? null,
+      city: detail.supplierCity ?? null,
+      state: detail.supplierState ?? null,
+    },
+    update: {
+      ...(detail.supplierName !== undefined ? { name: detail.supplierName } : {}),
+      ...(detail.supplierPhone !== undefined ? { phone: detail.supplierPhone } : {}),
+      ...(detail.supplierCity !== undefined ? { city: detail.supplierCity } : {}),
+      ...(detail.supplierState !== undefined ? { state: detail.supplierState } : {}),
+    },
+  });
+}
+
 async function createSaree(req: Request, res: Response, storeId: string) {
   const input = createSareeSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { id: req.auth!.userId }, select: { name: true } });
   const gst = computeGst(input.sellingPrice, input.isGstInclusive, input.gstRate);
   const detail = sareeRow(input.saree);
+  await upsertSupplierFromSaree(input.saree);
 
   const product = await prisma.$transaction(async (tx) => {
     const seq = await tx.appSequence.upsert({
@@ -957,6 +991,7 @@ async function updateSaree(
   const storeId = req.auth!.storeId;
   const gst = computeGst(input.sellingPrice, input.isGstInclusive, input.gstRate);
   const detail = sareeRow(input.saree);
+  await upsertSupplierFromSaree(input.saree);
   const variant = existing.variants[0];
   if (!variant) throw new ApiError(400, "This saree is missing its SKU row");
 

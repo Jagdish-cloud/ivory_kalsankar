@@ -11,7 +11,7 @@ import { useDeleteSaree, useProductDetail } from "@/features/inventory/api";
 import { useAuth } from "@/context/AuthContext";
 import { extractErrorMessage } from "@/lib/apiClient";
 import { storeBarcode } from "@/lib/barcode";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,6 +85,11 @@ export function ProductDetailPage() {
                   <DetailField label="Type" value={product.sareeDetail.sareeType ?? "-"} />
                   <DetailField label="Colour" value={product.sareeDetail.colour} />
                   <DetailField label="Supplier" value={product.sareeDetail.supplierName ?? "-"} />
+                  <DetailField label="Supplier Code" value={product.sareeDetail.supplierCode ?? "-"} />
+                  <DetailField
+                    label="Cost Price"
+                    value={product.sareeDetail.costPrice != null ? formatMoney(Number(product.sareeDetail.costPrice)) : "-"}
+                  />
                   <DetailField
                     label="Last Physical Verification"
                     value={product.sareeDetail.lastPhysicalVerification ? formatDate(product.sareeDetail.lastPhysicalVerification) : "Not verified"}

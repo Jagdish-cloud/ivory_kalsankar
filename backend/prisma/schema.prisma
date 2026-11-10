@@ -172,6 +172,18 @@ model SareeLookupOption {
   @@index([field])
 }
 
+/** Kalsankar supplier master. Code is required; other fields optional. Copied onto SareeDetail on save. */
+model Supplier {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String?
+  phone     String?
+  city      String?
+  state     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Product {
   id                String       @id @default(uuid())
   chain             StoreChain   @default(IVORY_LACE)
@@ -233,8 +245,12 @@ model SareeDetail {
 
   supplierName          String?
   supplierCode          String?
+  supplierPhone         String?
+  supplierCity          String?
+  supplierState         String?
   supplierInvoiceNumber String?
   purchaseDate          DateTime?
+  costPrice             Decimal? @db.Decimal(10, 2)
 
   originalStoreId          String?
   department               String?

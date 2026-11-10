@@ -2,9 +2,10 @@ import type { CreateSareePayload, ProductDetail } from "@/types/inventory";
 import { todayInput, toDateInput } from "@/features/inventory/addSku/saree/options";
 
 export interface SareeDraft {
-  saree: CreateSareePayload["saree"];
+  saree: Omit<CreateSareePayload["saree"], "costPrice"> & { costPrice?: number };
   hsnCode: string;
   description: string;
+  costPrice: string;
   sellingPrice: string;
   gstRate: string;
   isGstInclusive: boolean;
@@ -14,7 +15,7 @@ export interface SareeDraft {
   existingDocumentId: string | null;
 }
 
-export const emptySareeFields: CreateSareePayload["saree"] = {
+export const emptySareeFields: SareeDraft["saree"] = {
   sareeCategory: "",
   sareeType: "",
   subcategory: "",
@@ -34,6 +35,9 @@ export const emptySareeFields: CreateSareePayload["saree"] = {
   certification: "",
   supplierName: "",
   supplierCode: "",
+  supplierPhone: "",
+  supplierCity: "",
+  supplierState: "",
   supplierInvoiceNumber: "",
   purchaseDate: todayInput(),
   stockStatus: "Available",
@@ -47,6 +51,7 @@ export function createEmptySareeDraft(): SareeDraft {
     saree: { ...emptySareeFields },
     hsnCode: "",
     description: "",
+    costPrice: "",
     sellingPrice: "",
     gstRate: "",
     isGstInclusive: false,
@@ -81,6 +86,9 @@ export function draftFromSareeProduct(product: ProductDetail): SareeDraft {
       certification: d?.certification ?? "",
       supplierName: d?.supplierName ?? "",
       supplierCode: d?.supplierCode ?? "",
+      supplierPhone: d?.supplierPhone ?? "",
+      supplierCity: d?.supplierCity ?? "",
+      supplierState: d?.supplierState ?? "",
       supplierInvoiceNumber: d?.supplierInvoiceNumber ?? "",
       purchaseDate: toDateInput(d?.purchaseDate),
       stockStatus: d?.stockStatus ?? "Available",
@@ -90,6 +98,7 @@ export function draftFromSareeProduct(product: ProductDetail): SareeDraft {
     },
     hsnCode: product.hsnCode ?? "",
     description: product.description ?? "",
+    costPrice: d?.costPrice != null ? String(Number(d.costPrice)) : "",
     sellingPrice: variant ? String(Number(variant.sellingPriceInput)) : "",
     gstRate: variant ? String(Number(variant.gstRate)) : "",
     isGstInclusive: variant?.isGstInclusive ?? false,

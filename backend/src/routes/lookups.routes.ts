@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { brands, categories, colours, cups, sareeOptions, sizes, subCategories } from "@/controllers/lookups.controller";
+import { brands, categories, colours, cups, sareeOptions, sizes, subCategories, suppliers } from "@/controllers/lookups.controller";
 import { asyncHandler } from "@/utils/asyncHandler";
 
 const router = Router();
@@ -38,5 +38,10 @@ router.get("/saree-options", asyncHandler(sareeOptions.list));
 router.post("/saree-options", asyncHandler(sareeOptions.create));
 router.patch("/saree-options/:id", asyncHandler(sareeOptions.update));
 router.delete("/saree-options/:id", asyncHandler(sareeOptions.remove));
+
+router.get("/suppliers", asyncHandler(suppliers.list));
+router.post("/suppliers", asyncHandler(suppliers.create));
+router.patch("/suppliers/:id", asyncHandler(suppliers.update));
+router.delete("/suppliers/:id", asyncHandler(suppliers.remove));
 
 export default router;

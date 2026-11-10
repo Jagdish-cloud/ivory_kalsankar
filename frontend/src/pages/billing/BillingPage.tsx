@@ -463,7 +463,7 @@ export function BillingPage() {
       </div>
 
       {user && cart.lines.length > 0 && (
-        <div className="pointer-events-none absolute -left-[10000px] top-0 w-[210mm]" aria-hidden>
+        <div className="pointer-events-none absolute -left-[10000px] top-0 w-[210mm] print:static print:left-auto print:top-auto print:w-full" aria-hidden>
           <DraftBillPrint
             store={user.store}
             cashier={user.name}
