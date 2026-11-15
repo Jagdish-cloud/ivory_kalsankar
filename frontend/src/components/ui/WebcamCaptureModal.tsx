@@ -34,6 +34,10 @@ export function WebcamCaptureModal({ open, onClose, onCapture }: WebcamCaptureMo
     async (id?: string) => {
       stopStream();
       setError(null);
+      if (!window.isSecureContext) {
+        setError("Camera needs a secure (HTTPS) page. Open the app over HTTPS, or upload photos instead.");
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         setError("This browser does not support camera access. You can upload photos instead.");
         return;
@@ -58,7 +62,9 @@ export function WebcamCaptureModal({ open, onClose, onCapture }: WebcamCaptureMo
             ? "Camera permission was denied. Allow camera access in the browser, or upload photos instead."
             : name === "NotFoundError"
               ? "No camera was found on this device. You can upload photos instead."
-              : "Could not start the camera. You can upload photos instead."
+              : name === "NotReadableError" || name === "AbortError"
+                ? "The camera is in use by another app, or the browser could not open it. Close other apps and try again, or upload photos instead."
+                : "Could not start the camera. You can upload photos instead."
         );
       }
     },

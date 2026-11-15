@@ -2,6 +2,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { BarcodeSvg } from "@/features/labels/Label";
 import { todayInput, toDateInput } from "@/features/inventory/addSku/saree/options";
+import { labelPrefixForProductCategory } from "@/features/inventory/addSku/saree/productCategoryHsn";
 import type { SareeDraft } from "@/features/inventory/addSku/saree/types";
 
 interface Props {
@@ -15,16 +16,22 @@ interface Props {
 
 export function SareeStep4Barcodes({ draft, sareeId, barcodeValue, isEdit, createdAt, createdBy }: Props) {
   const type = draft.saree.sareeType?.trim() || draft.saree.sareeCategory || "-";
+  const prefix = labelPrefixForProductCategory(draft.saree.productCategory);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
       <Card>
         <h3 className="mb-1 text-sm font-bold text-ink-900">Barcode</h3>
         <p className="mb-4 text-xs text-ink-500">
-          System barcode is the Unique Saree ID. It does not change when you update the selling price.
+          System barcode is the Unique {prefix} ID. It does not change when you update the selling price.
         </p>
         <p className="mb-3 text-[11px] text-ink-500">Label size: 49 × 25 mm</p>
-        <div className="rounded-xl border border-brand-100 bg-white p-4">
+        <div className="relative rounded-xl border border-brand-100 bg-white p-4">
+          {draft.description.trim() && (
+            <div className="absolute right-3 top-2 max-w-[42%] truncate text-right text-[10px] font-semibold text-ink-700">
+              {draft.description.trim()}
+            </div>
+          )}
           <div className="mb-1 truncate text-center text-base font-bold text-ink-900">
             {draft.sellingPrice ? `₹${draft.sellingPrice}` : "—"}
           </div>
@@ -47,9 +54,11 @@ export function SareeStep4Barcodes({ draft, sareeId, barcodeValue, isEdit, creat
       <Card>
         <h3 className="text-sm font-bold text-ink-900">SKU Summary</h3>
         <dl className="mt-3 space-y-2 text-sm">
-          <SummaryRow label="Unique Saree ID" value={sareeId || "-"} />
-          <SummaryRow label="Category" value={draft.saree.sareeCategory || "-"} />
-          <SummaryRow label="Type" value={type} />
+          <SummaryRow label={`Unique ${prefix} ID`} value={sareeId || "-"} />
+          <SummaryRow label="Product Category" value={draft.saree.productCategory || "-"} />
+          <SummaryRow label="HSN" value={draft.hsnCode || "-"} />
+          <SummaryRow label={`${prefix} Category`} value={draft.saree.sareeCategory || "-"} />
+          <SummaryRow label={`${prefix} Type`} value={type} />
           <SummaryRow label="Colour" value={draft.saree.colour || "-"} />
           <SummaryRow label="Supplier Code" value={draft.saree.supplierCode || "-"} />
           <SummaryRow label="Cost Price" value={draft.costPrice ? `₹${draft.costPrice}` : "-"} />

@@ -42,6 +42,7 @@ export async function labelVariants(req: Request, res: Response) {
         select: {
           id: true,
           styleName: true,
+          description: true,
           sareeDetail: { select: { sareeCategory: true, supplierCode: true, colour: true, sareeType: true } },
         },
       },
@@ -66,6 +67,7 @@ export async function labelVariants(req: Request, res: Response) {
       colour: v.colour?.name ?? v.product.sareeDetail?.colour ?? null,
       sareeCategory: v.product.sareeDetail?.sareeCategory ?? null,
       supplierCode: v.product.sareeDetail?.supplierCode ?? null,
+      note: v.product.description ?? null,
       mrp: num(v.mrp),
       finalPrice: num(v.finalPrice),
       stockByStore: Object.fromEntries(v.stocks.map((s) => [s.storeId, s.quantity])),

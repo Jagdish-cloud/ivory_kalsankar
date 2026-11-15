@@ -49,6 +49,8 @@ export function Label({ item, barcode, preset, fields, textScale, firm, sellingP
     ? formatMoney(item.finalPrice).replace(".00", "")
     : `MRP ${formatMoney(item.mrp).replace(".00", "")}`;
 
+  const showNote = isSaree && fields.note && Boolean(item.note?.trim());
+
   return (
     <div
       className="flex flex-col overflow-hidden bg-white text-black"
@@ -58,10 +60,33 @@ export function Label({ item, barcode, preset, fields, textScale, firm, sellingP
         padding: `${Math.max(0.8, preset.labelH * 0.04)}mm ${Math.max(1, preset.labelW * 0.03)}mm`,
         boxSizing: "border-box",
         border: fields.border ? "0.2mm dashed #999" : "none",
+        position: "relative",
       }}
     >
+      {showNote && (
+        <div
+          className="absolute truncate text-right font-semibold"
+          style={{
+            top: `${Math.max(0.6, preset.labelH * 0.03)}mm`,
+            right: `${Math.max(0.8, preset.labelW * 0.03)}mm`,
+            maxWidth: "42%",
+            fontSize: `${baseMm * 0.7}mm`,
+            lineHeight: 1.1,
+          }}
+        >
+          {item.note}
+        </div>
+      )}
+
       {fields.brand && (
-        <div className="truncate text-center font-bold uppercase tracking-wide" style={{ fontSize: `${baseMm * 0.8}mm`, lineHeight: 1.1 }}>
+        <div
+          className="truncate text-center font-bold uppercase tracking-wide"
+          style={{
+            fontSize: `${baseMm * 0.8}mm`,
+            lineHeight: 1.1,
+            paddingRight: showNote ? "40%" : undefined,
+          }}
+        >
           {firm}
         </div>
       )}

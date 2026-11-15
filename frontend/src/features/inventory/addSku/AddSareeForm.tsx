@@ -24,11 +24,12 @@ const steps: WizardStepDef[] = [
 
 function validateStep(step: number, draft: SareeDraft): string | null {
   if (step === 1) {
-    if (!draft.saree.sareeCategory.trim()) return "Please select a saree category";
+    if (!draft.saree.productCategory?.trim()) return "Please select a product category";
+    if (!draft.saree.sareeCategory.trim()) return "Please select a category";
     if (!draft.saree.colour.trim()) return "Please select a colour";
   }
   if (step === 2) {
-    if (!draft.saree.supplierCode?.trim()) return "Please select or add a supplier code";
+    if (!draft.saree.supplierCode?.trim()) return "Please select a supplier from the Suppliers menu";
   }
   if (step === 3) {
     if (!draft.costPrice || Number(draft.costPrice) <= 0) return "Please enter a valid cost price";
@@ -68,7 +69,7 @@ export function AddSareeForm({ targetStore }: { targetStore?: StoreSummary }) {
     setHydrated(true);
   }, [existing, hydrated, user?.store.id]);
 
-  const sareeId = isEdit ? (existing?.internalStyleCode ?? "") : (nextId?.sareeId ?? "DKS-00000001");
+  const sareeId = isEdit ? (existing?.internalStyleCode ?? "") : (nextId?.sareeId ?? "DKS-1");
   const barcodeValue = actingStore?.code ? storeBarcode(actingStore.code, sareeId) : sareeId;
 
   function update(patch: Partial<SareeDraft>) {

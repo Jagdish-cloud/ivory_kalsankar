@@ -797,8 +797,22 @@ const optionalSareeText = (max = 80) =>
     .nullable()
     .transform((v) => (v ? v : null));
 
+const PRODUCT_CATEGORIES = [
+  "SAREES",
+  "SILKS SAREE",
+  "SHAWL",
+  "PAVADA PC",
+  "SHIRT PC",
+  "PANT & SHIRT PCS",
+  "MUNDU",
+  "DRESS MATERIAL",
+  "DHOTI",
+  "DHOTI SET",
+] as const;
+
 const sareeDetailSchema = z.object({
   sareeCategory: z.string().trim().min(1, "Saree category is required").max(80),
+  productCategory: z.enum(PRODUCT_CATEGORIES),
   sareeType: optionalSareeText(),
   subcategory: optionalSareeText(),
   weavingTechnique: optionalSareeText(),
@@ -854,6 +868,7 @@ function sareeStyleName(detail: { sareeType?: string | null; sareeCategory: stri
 function sareeRow(detail: z.infer<typeof sareeDetailSchema>) {
   return {
     sareeCategory: detail.sareeCategory,
+    productCategory: detail.productCategory,
     sareeType: detail.sareeType,
     subcategory: detail.subcategory,
     weavingTechnique: detail.weavingTechnique,
@@ -894,37 +909,51 @@ export async function nextSareeId(req: Request, res: Response) {
   res.json({ sareeId: formatSareeId((row?.sareeSeq ?? 0) + 1) });
 }
 
-async function upsertSupplierFromSaree(detail: {
-  supplierCode: string;
-  supplierName?: string | null;
-  supplierPhone?: string | null;
-  supplierCity?: string | null;
-  supplierState?: string | null;
-}) {
-  await prisma.supplier.upsert({
-    where: { code: detail.supplierCode },
-    create: {
-      code: detail.supplierCode,
-      name: detail.supplierName ?? null,
-      phone: detail.supplierPhone ?? null,
-      city: detail.supplierCity ?? null,
-      state: detail.supplierState ?? null,
-    },
-    update: {
-      ...(detail.supplierName !== undefined ? { name: detail.supplierName } : {}),
-      ...(detail.supplierPhone !== undefined ? { phone: detail.supplierPhone } : {}),
-      ...(detail.supplierCity !== undefined ? { city: detail.supplierCity } : {}),
-      ...(detail.supplierState !== undefined ? { state: detail.supplierState } : {}),
-    },
-  });
+/** New SKUs must pick a supplier from the Suppliers menu. Existing SKUs may keep a legacy code. */
+async function resolveSupplierSnapshot(
+  detail: {
+    supplierCode: string;
+    supplierName?: string | null;
+    supplierPhone?: string | null;
+    supplierCity?: string | null;
+    supplierState?: string | null;
+  },
+  opts: { mustExist: boolean }
+) {
+  const supplier = await prisma.supplier.findUnique({ where: { code: detail.supplierCode } });
+  if (supplier) {
+    return {
+      code: supplier.code,
+      name: supplier.name,
+      phone: supplier.phone,
+      city: supplier.city,
+      state: supplier.state,
+    };
+  }
+  if (opts.mustExist) {
+    throw new ApiError(400, `Supplier "${detail.supplierCode}" was not found. Add it under Suppliers first.`);
+  }
+  return {
+    code: detail.supplierCode,
+    name: detail.supplierName ?? null,
+    phone: detail.supplierPhone ?? null,
+    city: detail.supplierCity ?? null,
+    state: detail.supplierState ?? null,
+  };
 }
 
 async function createSaree(req: Request, res: Response, storeId: string) {
   const input = createSareeSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { id: req.auth!.userId }, select: { name: true } });
   const gst = computeGst(input.sellingPrice, input.isGstInclusive, input.gstRate);
-  const detail = sareeRow(input.saree);
-  await upsertSupplierFromSaree(input.saree);
+  const supplier = await resolveSupplierSnapshot(input.saree, { mustExist: true });
+  const detail = {
+    ...sareeRow(input.saree),
+    supplierName: supplier.name,
+    supplierPhone: supplier.phone,
+    supplierCity: supplier.city,
+    supplierState: supplier.state,
+  };
 
   const product = await prisma.$transaction(async (tx) => {
     const seq = await tx.appSequence.upsert({
@@ -942,12 +971,13 @@ async function createSaree(req: Request, res: Response, storeId: string) {
         hsnCode: input.hsnCode,
         countryOfOrigin: input.saree.regionOfOrigin,
         description: input.description,
-        supplierManufacturer: input.saree.supplierName,
+        supplierManufacturer: supplier.name,
         isActive: true,
         images: { create: input.images.map((image) => persistableProductImage(image)) },
         sareeDetail: {
           create: {
             ...detail,
+            supplierCode: supplier.code,
             originalStoreId: storeId,
             dateReceived: detail.dateReceived ?? new Date(),
             createdByName: user?.name ?? null,
@@ -990,8 +1020,15 @@ async function updateSaree(
   const input = createSareeSchema.parse(req.body);
   const storeId = req.auth!.storeId;
   const gst = computeGst(input.sellingPrice, input.isGstInclusive, input.gstRate);
-  const detail = sareeRow(input.saree);
-  await upsertSupplierFromSaree(input.saree);
+  const supplier = await resolveSupplierSnapshot(input.saree, { mustExist: false });
+  const detail = {
+    ...sareeRow(input.saree),
+    supplierName: supplier.name,
+    supplierPhone: supplier.phone,
+    supplierCity: supplier.city,
+    supplierState: supplier.state,
+    supplierCode: supplier.code,
+  };
   const variant = existing.variants[0];
   if (!variant) throw new ApiError(400, "This saree is missing its SKU row");
 
@@ -1010,7 +1047,7 @@ async function updateSaree(
         hsnCode: input.hsnCode,
         countryOfOrigin: input.saree.regionOfOrigin,
         description: input.description,
-        supplierManufacturer: input.saree.supplierName,
+        supplierManufacturer: supplier.name,
       },
     });
     await tx.sareeDetail.upsert({

@@ -2,9 +2,14 @@ import { useRef, useState } from "react";
 import { Camera, ImagePlus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { TextField } from "@/components/ui/Field";
+import { SelectField, TextField } from "@/components/ui/Field";
 import { WebcamCaptureModal } from "@/components/ui/WebcamCaptureModal";
 import { SareeLookupField } from "@/features/inventory/addSku/saree/SareeLookupField";
+import {
+  PRODUCT_CATEGORY_OPTIONS,
+  hsnForProductCategory,
+  labelPrefixForProductCategory,
+} from "@/features/inventory/addSku/saree/productCategoryHsn";
 import type { SareeDraft } from "@/features/inventory/addSku/saree/types";
 
 interface Props {
@@ -20,6 +25,7 @@ export function SareeStep1Details({ draft, update, setSaree, sareeId, isEdit, on
   const fileRef = useRef<HTMLInputElement>(null);
   const [webcamOpen, setWebcamOpen] = useState(false);
   const photoSrc = draft.photoPreview || draft.existingPhotoUrl;
+  const prefix = labelPrefixForProductCategory(draft.saree.productCategory);
 
   function applyPhoto(file: File) {
     if (draft.photoPreview) URL.revokeObjectURL(draft.photoPreview);
@@ -32,7 +38,7 @@ export function SareeStep1Details({ draft, update, setSaree, sareeId, isEdit, on
 
   return (
     <Card>
-      <h3 className="mb-4 text-sm font-bold text-ink-900">Saree details</h3>
+      <h3 className="mb-4 text-sm font-bold text-ink-900">{prefix} details</h3>
       <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
         <div>
           <button
@@ -42,7 +48,7 @@ export function SareeStep1Details({ draft, update, setSaree, sareeId, isEdit, on
             aria-label={photoSrc ? "Retake photo with camera" : "Take photo with camera"}
           >
             {photoSrc ? (
-              <img src={photoSrc} alt="Saree" className="h-full w-full object-cover" />
+              <img src={photoSrc} alt={prefix} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-ink-400">
                 <Camera className="h-8 w-8" />
@@ -77,24 +83,41 @@ export function SareeStep1Details({ draft, update, setSaree, sareeId, isEdit, on
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <TextField label="Unique Saree ID" required value={sareeId} readOnly />
+          <TextField label={`Unique ${prefix} ID`} required value={sareeId} readOnly />
           <div className="flex items-end">
             {!isEdit && (
-              <Button variant="secondary" className="mb-0.5" onClick={onRefreshId} aria-label="Refresh saree ID">
+              <Button variant="secondary" className="mb-0.5" onClick={onRefreshId} aria-label={`Refresh ${prefix} ID`}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
             )}
           </div>
+          <SelectField
+            label="Product Category"
+            required
+            placeholder="Select product category"
+            value={draft.saree.productCategory ?? ""}
+            onChange={(e) => {
+              const productCategory = e.target.value;
+              setSaree("productCategory", productCategory);
+              if (productCategory) update({ hsnCode: hsnForProductCategory(productCategory) });
+            }}
+          >
+            {PRODUCT_CATEGORY_OPTIONS.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </SelectField>
           <SareeLookupField
             field="sareeCategory"
-            label="Saree Category"
+            label={`${prefix} Category`}
             required
             value={draft.saree.sareeCategory}
             onChange={(name) => setSaree("sareeCategory", name)}
           />
           <SareeLookupField
             field="sareeType"
-            label="Saree Type"
+            label={`${prefix} Type`}
             value={draft.saree.sareeType ?? ""}
             onChange={(name) => setSaree("sareeType", name)}
           />

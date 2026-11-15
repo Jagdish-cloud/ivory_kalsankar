@@ -34,3 +34,21 @@ The API origin request policy must forward:
 - `Content-Type`
 
 CORS is not required when the SPA and `/api` share the same CloudFront hostname (`VITE_API_BASE_URL=/api`).
+
+## Camera (webcam capture)
+
+Product photo capture uses the browser `getUserMedia` API on the SPA origin. CloudFront does **not** proxy the camera stream, but a restrictive response header can block it.
+
+Attach a **Response headers policy** on the default (`*`) behavior (S3 frontend):
+
+| Header | Value |
+|---|---|
+| `Permissions-Policy` | `camera=(self)` |
+
+Also keep **Viewer protocol policy = Redirect HTTP to HTTPS**. Camera access requires a secure context.
+
+If camera still fails after that:
+
+1. Confirm the site is opened as `https://…` (not `http://` or a raw S3 website endpoint).
+2. Allow camera permission in the browser for the CloudFront hostname.
+3. Use **Upload** on the SKU form as a fallback.

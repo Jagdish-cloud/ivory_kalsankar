@@ -47,7 +47,11 @@ function fieldLabelsFor(isSaree: boolean): { key: keyof LabelFields; label: stri
     { key: "style", label: isSaree ? "Type / colour" : "Style name" },
   ];
   if (isSaree) {
-    common.push({ key: "category", label: "Saree category" }, { key: "supplierCode", label: "Supplier code" });
+    common.push(
+      { key: "category", label: "Saree category" },
+      { key: "supplierCode", label: "Supplier code" },
+      { key: "note", label: "Note (top right)" }
+    );
   } else {
     common.push({ key: "variant", label: "Size / cup / colour" });
   }

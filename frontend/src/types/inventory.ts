@@ -90,6 +90,7 @@ export interface ProductVariantDetail {
 
 export interface SareeDetail {
   sareeCategory: string;
+  productCategory: string | null;
   sareeType: string | null;
   subcategory: string | null;
   weavingTechnique: string | null;
@@ -157,6 +158,7 @@ export interface ProductDetail {
 export interface CreateSareePayload {
   saree: {
     sareeCategory: string;
+    productCategory: string;
     sareeType?: string | null;
     subcategory?: string | null;
     weavingTechnique?: string | null;

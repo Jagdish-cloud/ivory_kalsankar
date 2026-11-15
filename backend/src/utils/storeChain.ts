@@ -3,7 +3,7 @@ import { prisma } from "@/prismaClient";
 import { ApiError } from "@/middleware/errorHandler";
 
 export function formatSareeId(seq: number) {
-  return `DKS-${String(seq).padStart(8, "0")}`;
+  return `DKS-${seq}`;
 }
 
 export async function storeChainOf(storeId: string): Promise<StoreChain> {

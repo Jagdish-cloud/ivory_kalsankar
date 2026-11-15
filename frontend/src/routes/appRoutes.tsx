@@ -54,6 +54,7 @@ const ReportsPage = lazy(() => import("@/pages/reports/ReportsPage").then((m) =>
 const SettingsPage = lazy(() => import("@/pages/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })));
 const StoresPage = lazy(() => import("@/pages/admin/StoresPage").then((m) => ({ default: m.StoresPage })));
 const UsersPage = lazy(() => import("@/pages/admin/UsersPage").then((m) => ({ default: m.UsersPage })));
+const SuppliersPage = lazy(() => import("@/pages/suppliers/SuppliersPage").then((m) => ({ default: m.SuppliersPage })));
 
 const inventoryHandle = { title: "Inventory", subtitle: "Manage your stock, variants and sizes" };
 
@@ -171,6 +172,11 @@ export const appRoutes: RouteObject[] = [
               </RequireRole>
             ),
             handle: { title: "Users", subtitle: "Staff accounts and roles" },
+          },
+          {
+            path: "/suppliers",
+            element: <SuppliersPage />,
+            handle: { title: "Suppliers", subtitle: "Supplier master for Kalsankar SKUs" },
           },
           {
             path: "/customers",

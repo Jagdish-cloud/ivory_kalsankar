@@ -81,6 +81,7 @@ export function ProductDetailPage() {
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
               {product.sareeDetail ? (
                 <>
+                  <DetailField label="Product Category" value={product.sareeDetail.productCategory ?? "-"} />
                   <DetailField label="Category" value={product.sareeDetail.sareeCategory} />
                   <DetailField label="Type" value={product.sareeDetail.sareeType ?? "-"} />
                   <DetailField label="Colour" value={product.sareeDetail.colour} />

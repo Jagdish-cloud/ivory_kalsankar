@@ -43,6 +43,8 @@ npx prisma migrate deploy
 
 - Take an RDS snapshot first (see [BACKUP_AND_RECOVERY.md](BACKUP_AND_RECOVERY.md)).
 - The `20261108200000_prod_indexes_app_settings` migration is additive: `AppSetting` table + indexes. It does not drop data.
+- `20261111000000_supplier_and_cost_price` is additive: `Supplier` table + saree supplier/cost columns.
+- `20261115000000_product_category` is additive: nullable `SareeDetail.productCategory`.
 - Do not run `prisma migrate dev` or `prisma db push` on RDS.
 - Do not run seed on production.
 

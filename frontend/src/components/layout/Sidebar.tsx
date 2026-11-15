@@ -12,6 +12,7 @@ import {
   Phone,
   Undo2,
   Building2,
+  Factory,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useAppTheme } from "@/hooks/useAppTheme";
@@ -80,6 +81,7 @@ export function Sidebar() {
     },
     { to: "/billing", label: "Billing (POS)", icon: ShoppingCart, sub: billingSubItems },
     { to: "/returns", label: "Returns & Exchange", icon: Undo2, sub: returnsSubItems },
+    ...(isSaree ? [{ to: "/suppliers", label: "Suppliers", icon: Factory }] : []),
     { to: "/customers", label: "Customers", icon: Users },
     { to: "/purchases", label: "Purchases", icon: Truck },
     { to: "/transfers", label: "Transfers", icon: ArrowLeftRight, sub: transferSubItems },

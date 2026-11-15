@@ -17,6 +17,7 @@ export interface SareeDraft {
 
 export const emptySareeFields: SareeDraft["saree"] = {
   sareeCategory: "",
+  productCategory: "",
   sareeType: "",
   subcategory: "",
   weavingTechnique: "",
@@ -53,8 +54,8 @@ export function createEmptySareeDraft(): SareeDraft {
     description: "",
     costPrice: "",
     sellingPrice: "",
-    gstRate: "",
-    isGstInclusive: false,
+    gstRate: "5",
+    isGstInclusive: true,
     photoFile: null,
     photoPreview: null,
     existingPhotoUrl: null,
@@ -68,6 +69,7 @@ export function draftFromSareeProduct(product: ProductDetail): SareeDraft {
   return {
     saree: {
       sareeCategory: d?.sareeCategory ?? "",
+      productCategory: d?.productCategory ?? "",
       sareeType: d?.sareeType ?? "",
       subcategory: d?.subcategory ?? "",
       weavingTechnique: d?.weavingTechnique ?? "",
